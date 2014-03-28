@@ -1,5 +1,6 @@
 #!/bin/bash
 # Script to install dependencies of PringleCV on a CSSE3010 2014 VM.
+# http://help.ubuntu.com/community/OpenCV
 
 # (1) Basics
 cd /home/csse3010
