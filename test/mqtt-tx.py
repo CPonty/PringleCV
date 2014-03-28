@@ -8,25 +8,24 @@ import time
 import sys
 
 def on_message(mosq, obj, msg):
-    print "Received: '%s' (topic: '%s')" %(msg.topic, msg.payload)
+    print "Received\t'%s' | topic '%s' qos%d" %(msg.topic, msg.payload, msg.qos)
 
 def on_connect(mosq, obj, rc):
-    print "Connected: status %d" %(rc)
+    print "Connected\tstatus %d" %(rc)
 
 def on_disconnect(mosq, obj, rc):
-    print "Disconnected: status %d" %(rc)
+    print "Disconnected\tstatus %d" %(rc)
 
 def on_subscribe(mosq, obj, mid, qos_list):
-    print "Subscribed: mid %s" %(mid)
+    print "Subscribed\tmid %s" %(mid)
 
 def on_unsubscribe(mosq, obj, mid):
-    print "Unsubscribed: mid %s" %(mid)
+    print "Unsubscribed\tmid %s" %(mid)
 
 def on_publish(mosq, obj, mid):
-    print "Published: mid %s" %(mid)
+    print "Published\tmid %s" %(mid)
 
-clientname="test-tx-client"
-mqttclient = mosquitto.Mosquitto(clientname)
+mqttclient = mosquitto.Mosquitto() #no client id = randomly generated
 
 mqttclient.on_message = on_message
 mqttclient.on_connect = on_connect
@@ -36,19 +35,25 @@ mqttclient.on_unsubscribe = on_unsubscribe
 mqttclient.on_publish = on_publish
 
 ip="127.0.0.1"
-print "Connecting to %s:1883 as '%s'" %(ip, clientname)
-mqttclient.connect(ip)
+port=1883
+print "Connecting to %s:%d" %(ip, port)
+mqttclient.connect(ip, port)
 
-try:
-    while True:
-        mqttclient.loop()
-        msg="hello world!"
-        topic="mqtttest"
-        qos=0
-        print "Publishing message '%s' to topic '%s', qos%d" %(msg, topic, qos)
-        mqttclient.publish(msg, topic, qos)
-        time.sleep(1)
-except KeyboardInterrupt:
+def stop():
     print "Disconnecting..."
     mqttclient.disconnect()
     sys.exit()
+
+try:
+    while True:
+        msg="{x:5,y:10,o:90,d:35}"
+        topic="mqtttest"
+        qos=1
+        print "Publishing '%s' to topic '%s', qos%d" %(msg, topic, qos)
+        mqttclient.publish(topic, msg, qos)
+        if (mqttclient.loop() != 0):
+            print "<Network Disconnect/Error>"
+            stop()
+        time.sleep(1)
+except KeyboardInterrupt:
+    stop()

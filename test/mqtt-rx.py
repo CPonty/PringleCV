@@ -8,25 +8,24 @@ import time
 import sys
 
 def on_message(mosq, obj, msg):
-    print "Received: '%s' (topic: '%s' qos:%d)" %(msg.payload, msg.topic, msg.qos)
+    print "Received\t'%s' | topic '%s' qos%d" %(msg.payload, msg.topic, msg.qos)
 
 def on_connect(mosq, obj, rc):
-    print "Connected: status %d" %(rc)
+    print "Connected\tstatus %d" %(rc)
 
 def on_disconnect(mosq, obj, rc):
-    print "Disconnected: status %d" %(rc)
+    print "Disconnected\tstatus %d" %(rc)
 
 def on_subscribe(mosq, obj, mid, qos_list):
-    print "Subscribed: mid %s" %(mid)
+    print "Subscribed\tmid %s" %(mid)
 
 def on_unsubscribe(mosq, obj, mid):
-    print "Unsubscribed: mid %s" %(mid)
+    print "Unsubscribed\tmid %s" %(mid)
 
 def on_publish(mosq, obj, mid):
-    print "Published: mid %s" %(mid)
+    print "Published\tmid %s" %(mid)
 
-clientname="test-rx-client"
-mqttclient = mosquitto.Mosquitto(clientname)
+mqttclient = mosquitto.Mosquitto() #no client id = randomly generated
 
 mqttclient.on_message = on_message
 mqttclient.on_connect = on_connect
@@ -36,21 +35,21 @@ mqttclient.on_unsubscribe = on_unsubscribe
 mqttclient.on_publish = on_publish
 
 ip="127.0.0.1"
-print "Connecting to %s:1883 as '%s'" %(ip, clientname)
-mqttclient.connect(ip)
+port=1883
+print "Connecting to %s:%d" %(ip, port)
+mqttclient.connect(ip, port)
 
 topic="mqtttest"
-qos=0
+qos=1
 print "Subscribing to topic '%s', qos%d" %(topic, qos)
 mqttclient.subscribe(topic, qos)
 
-try:
-    while True:
-        #sys.stdout.write('(loop)')
-        #sys.stdout.flush()
-        mqttclient.loop()
-        #time.sleep(1)
-except KeyboardInterrupt:
+def stop():
     print "Disconnecting..."
     mqttclient.disconnect()
     sys.exit()
+
+try:
+    mqttclient.loop_forever()
+except KeyboardInterrupt:
+    stop()
