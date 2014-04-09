@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>PringleCV - Webcam & Network Control</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.2/jquery.mobile-1.4.2.min.css">
+	<script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
+	<script src="http://code.jquery.com/mobile/1.4.2/jquery.mobile-1.4.2.min.js"></script>
+	<link rel="stylesheet" href="styles.css" type="text/css">
+	<script type="text/javascript" src="scripts.js"></script>
+</head>
+<body>
+<div data-role="page" id="page-home">
+	
+	<div id="panel-info" data-role="panel" data-display="overlay" data-position="right"> 
+		<h2>About PringleCV</h2>
+		<p>Static page only so far.</p>
+		<a href="http://github.com/CPonty/PringleCV/" target="_blank">Github</a>
+		<br/><br/>
+		<div class="ui-icon-alert ui-btn-icon-left" data-mini="true" style="position:relative">
+			Warning - webpage controls local server via a websocket. Avoid opening multiple windows!
+		</div>
+		<br/><br/>
+		<!--<a href="#page" data-rel="close" class="ui-btn ui-btn-inline ui-shadow ui-corner-all ui-btn-a ui-icon-delete ui-btn-icon-left">
+			Close panel
+		</a>-->
+	</div> 
+	
+	<div id="div-header" data-role="header"> <!--data-position="fixed"-->
+		<a id="btn-header-raw" href="/raw" class="ui-btn ui-corner-all ui-shadow ui-icon-search ui-btn-icon-left">Raw Video Stream</a>
+		<h1>PringleCV - Webcam & Network Controller</h1>
+		<a id="btn-header-about" href="#panel-info" class="ui-btn ui-corner-all ui-shadow ui-icon-info ui-btn-icon-left">About PringleCV</a>
+	</div>
+
+	<div id="div-main" data-role="main" class="ui-content">
+		<fieldset id="fieldset-main" class="ui-grid-a">
+			<div class="ui-block-a">
+				<div data-role="collapsible-set">
+					<div id="collapsible-webcam" data-role="collapsible" data-collapsed="true" data-mini="true" data-collapsed-icon="carat-d" data-expanded-icon="carat-u">
+						<h1> Webcam Panel </h1>
+						<select id="combo-web-src" name="combo-web-src" data-role="combo" data-icon="gear" data-mini="true">
+							<option value="none">(No Webcam)</option>
+						</select>
+						<select id="combo-web-feed" name="combo-web-feed" data-role="combo" data-icon="gear" data-mini="true">
+							<option value="raw">Raw Feed</option>
+							<option value="overlay">Overlay</option>
+							<option value="rover">Rover Visualisation</option>
+						</select>
+						<div data-role="fieldcontain">
+							<label for="flip-web-on">Streaming:</label>
+							<select id="flip-web-on" name="flip-web-on" data-role="slider" data-mini="true">
+								<option value="off">Off</option>
+								<option value="on">On</option>
+							</select>
+						</div>
+						<br/>
+						<textarea id="text-webcam" name="text-webcam" rows="10" placeholder="(waiting for messages)" readonly></textarea>
+						<!--<a href="#collapsible-network" id="hyper-webcam">
+							next
+						</a>-->
+					</div>
+				
+					<div id="collapsible-network" data-role="collapsible" data-collapsed="true" data-mini="true" data-collapsed-icon="carat-d" data-expanded-icon="carat-u">
+						<h1> Network Panel </h1>
+						<br/>
+						<fieldset id="fieldset-network-slider" class="ui-grid-a">
+							<div class="ui-block-a">
+								<label for="flip-net-src">Source:</label>
+								<select id="flip-net-src" name="flip-net-src" data-role="slider" data-mini="true">
+									<option value="webpage">Webpage</option>
+									<option value="webcam">Webcam</option>
+								</select>
+							</div>
+							<div class="ui-block-b">
+								<label for="flip-net-on">Broadcast:</label>
+								<select id="flip-net-on" name="flip-net-on" data-role="slider" data-mini="true">
+									<option value="off">Off</option>
+									<option value="on">On</option>
+								</select>
+							</div>
+						</fieldset>
+						<br/>
+						<fieldset id="fieldset-network-xyod" class="ui-grid-a">
+							<form id="form-network">
+								<div class="ui-block-a">
+								    <label for="xval">X (%) </label>
+								    <input id="xval" name="xval" value="50" type="number" default="50" min="0" max="100" step="1" pattern="^\[0-9\]{1,3}" data-mini="true">
+								</div>
+								<div class="ui-block-b">
+								    <label for="oval">Orientation (deg.) </label>
+								    <input id="oval" name="oval" value="0" type="number" default="0" min="0" max="359" step="1"  data-mini="true">
+								</div>
+								<div class="ui-block-a"> 
+								    <label for="yval">Y (%) </label>
+								    <input id="yval" name="yval" value="50" type="number" default="50" min="0" max="100" step="1"  data-mini="true">
+								</div>
+								<div class="ui-block-b">
+								    <label for="dval">Distance (cm) </label>
+								    <input id="dval" name="dval" value="100" type="number" default="100" min="0" max="999" step="1" data-mini="true">
+								</div>
+							</form>
+						</fieldset>
+						<br/>
+						<textarea id="text-network" name="text-network" rows="10" placeholder="(waiting for messages)" readonly></textarea>
+						<a href="#collapsible-webcam" id="hyper-network">
+							back to top
+						</a>
+					</div>
+				</div>
+			</div>
+			<div class="ui-block-b topleft-wrapper" data-position="fixed">
+				
+				<image id="img-webcam" src="" width="640" height="480" class="ui-corner-all ui-shadow"/>
+				
+			</div>
+		</fieldset>
+	</div>
+
+  <!--<div id="div_footer" data-role="footer"> data-position="fixed"
+    <h1>Insert Footer Text Here</h1>
+  </div>-->
+</div>
+</body>
+</html>
