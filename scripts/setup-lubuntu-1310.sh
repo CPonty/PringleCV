@@ -45,7 +45,7 @@ alias sudo='sudo '
 alias vi='vim'
 alias down='sudo shutdown -h now'
 alias reboot='shutdown -h'"
-[[ -z `grep "$aliases" /home/csse3010/.bashrc` ]] || \
+[[ -z `grep "alias reboot=" /home/csse3010/.bashrc` ]] && \
   echo "$aliases" >> /home/csse3010/.bashrc
 }
 
