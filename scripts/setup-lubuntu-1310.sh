@@ -20,27 +20,34 @@ cd /home/csse3010
 [[ "${steps[0]}" == "y" ]] && {
 info "===Update/Upgrade==="
 sudo apt-get -y update
-#sudo apt-get -y upgrade <-- evil!
+sudo apt-get -y upgrade
 }
 
 # (2) Basic Packages
 [[ "${steps[1]}" == "y" ]] && {
 info "===Basic Packages==="
+info "  1  Install packages"
 dependencies=('mosquitto' 'mosquitto-clients' 'vim' 'python-dev' 'guvcview' 'zerofree' 'git' 'subversion' 'git-svn' 'gitg' 'python-pip' 'dkms')
 for d in "${dependencies[@]}"; do
   info "Install: $d"
-  sudo apt-get -qq -y install "$d"
+  sudo apt-get -y install "$d"
 done
+info "  2  Update .vimrc"
 [[ -z "$(grep 'set background=' /home/csse3010/.vimrc )" ]] && \
   echo "set background=dark" >> /home/csse3010/.vimrc
+info "  3  Update .bashrc"
+[[ -z "$(grep 'alias vi=' /home/csse3010/.bashrc )" ]] && \
+  echo "alias vi='vim'" >> /home/csse3010/.bashrc
 }
 
 # (3) Lxterminal Autostart
 [[ "${steps[2]}" == "y" ]] && {
 info "===LXTerminal Autostart==="
 autodir=/home/csse3010/.config/autostart
-mkdir -p "$autodir"
-cp /usr/share/applications/lxterminal.desktop "$autodir"
+mkdir -p $autodir
+cp /usr/share/applications/lxterminal.desktop $autodir
+sed -i 's/^disable_autostart=.*$/disable_autostart=no/g' \
+  /home/csse3010/.config/lxsession/Lubuntu/desktop.conf
 }
 
 # (4) Python packages
