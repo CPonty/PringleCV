@@ -30,7 +30,8 @@ for d in "${dependencies[@]}"; do
   info "Install: $d"
   sudo apt-get -qq -y install "$d"
 done
-echo "set background=dark" >> /home/csse3010/.vimrc
+[[ -z "$(grep 'set background=' /home/csse3010/.vimrc )" ]] && \
+  echo "set background=dark" >> /home/csse3010/.vimrc
 }
 
 # (3) Lxterminal Autostart
@@ -49,7 +50,7 @@ sudo pip -q install mosquitto
 }
 
 # (5) OpenCV
-[[ "${steps[5]}" == "y" ]] && {
+[[ "${steps[5]}" == "y" && ! -d /home/jboss/OpenCV ]] && {
 info "===OpenCV==="
 version="2.4.8"
 mkdir -p "OpenCV"
@@ -91,9 +92,10 @@ sed -i 's/^GRUB_HIDDEN_TIMEOUT=.*$/#GRUB_HIDDEN_TIMEOUT=3/g' /etc/default/grub
 sed -i 's/^GRUB_HIDDEN_TIMEOUT_QUIET=.*$/#GRUB_HIDDEN_TIMEOUT_QUIET=false/g' /etc/default/grub
 sed -i 's/^GRUB_TIMEOUT=.*$/GRUB_TIMEOUT=0/g' /etc/default/grub
 sudo update-grub
+}
 
 # (7) PringleCV
-[[ "${steps[7]}" == "y" ]] && {
+[[ "${steps[7]}" == "y" && ! -d /home/jboss/PringleCV ]] && {
 cd /home/csse3010
 repo=https://github.com/CPonty/PringleCV.git
 git clone "$repo" || echo "[ERROR] Git checkout failed"
