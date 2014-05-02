@@ -1,6 +1,10 @@
 #!/bin/bash
 # Script to install PringleCV dependencies & tools for CSSE3010 on a Lubuntu 13.X VM.
-# Script URL: https://raw.githubusercontent.com/CPonty/PringleCV/master/scripts/setup-lubuntu-1310.sh
+# Download & run script: 
+#   url="https://raw.githubusercontent.com/CPonty/PringleCV/master/scripts/setup-lubuntu-1310.sh"
+#   wget "$url" 
+#   chmod +x setup-lubuntu-1310.sh
+#   ./setup-lubuntu-1310.sh
 # OpenCV on Ubuntu: http://help.ubuntu.com/community/OpenCV
 
 #      1 2 3 4 5 6 7
@@ -12,16 +16,18 @@ cd /home/csse3010
 # (1) Basics
 [[ "${steps[1]}" == "y" ]] && {
 info "===Basics==="
-dependencies1=('mosquitto' 'mosquitto-clients' 'vim' 'python-dev' 'guvcview' 'zerofree' 'git' 'subversion' 'git-svn' 'gitg' 'python-pip' 'dkms')
+info "apt-get update"
+sudo apt-get -qq -y update
+sudo apt-get -qq -y upgrade
+dependencies=('mosquitto' 'mosquitto-clients' 'vim' 'python-dev' 'guvcview' 'zerofree' 'git' 'subversion' 'git-svn' 'gitg' 'python-pip' 'dkms')
 for d in "${dependencies[@]}"; do
   info "Install: $d"
   sudo apt-get -qq -y install "$d"
 done
-sudo apt-get -qq -y update
-sudo apt-get -qq -y upgrade
 info "Autostart: lxterminal"
-mkdir -p /home/csse3010/.config/autostart
-cp /usr/share/applications/lxterminal.desktop autostart/
+autodir=/home/csse3010/.config/autostart
+mkdir -p "$autodir"
+cp /usr/share/applications/lxterminal.desktop "$autodir"
 }
 
 # (2) Python packages
