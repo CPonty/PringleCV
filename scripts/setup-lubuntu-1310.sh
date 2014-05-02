@@ -53,8 +53,8 @@ alias reboot='shutdown -h'"
 [[ "${steps[3]}" == "y" ]] && {
 info "===LXTerminal Autostart==="
 autodir=/home/csse3010/.config/autostart
-mkdir -p $autodir
-cp /usr/share/applications/lxterminal.desktop $autodir
+mkdir -p $autodir && cd $autodir
+cp /usr/share/applications/lxterminal.desktop .
 sed -i 's/^disable_autostart=.*$/disable_autostart=no/g' \
   /home/csse3010/.config/lxsession/Lubuntu/desktop.conf
 }
@@ -71,9 +71,8 @@ sudo pip -q install mosquitto
 [[ "${steps[5]}" == "y" && ! -d /home/csse3010/OpenCV ]] && {
 info "===OpenCV==="
 version="2.4.8"
-cd /home/csse3010
-mkdir -p OpenCV
-cd OpenCV
+cvdir=/home/csse3010/OpenCV
+mkdir -p $cvdir && cd $cvdir
 info "1 Removing pre-installed clashing libraries"
 sudo apt-get -qq -y remove ffmpeg x264 libx264-dev
 info "2 Installing dependenices"
@@ -124,9 +123,14 @@ git clone "$repo" || echo "[ERROR] Git checkout failed"
 # (9) Git/SVN Setup
 [[ "${steps[8]}" == "y" ]] && {
 info "===git-svn-setup==="
-cd /home/csse3010
+docdir=/home/csse3010/Documents
+mkdir -p $docdir && cd $docdir
 cp PringleCV/scripts/git-svn-setup.sh .
 chmod +x git-svn-setup.sh
+svn co https://source.eait.uq.edu.au/svn/csse3010/trunk np2_svn \
+--username csse3010@svn.itee.uq.edu.au --password csse3010 <<< "
+no
+"
 }
 
 # (*) Done
