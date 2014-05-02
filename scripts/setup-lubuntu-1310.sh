@@ -1,19 +1,20 @@
 #!/bin/bash
 # Script to install PringleCV dependencies & tools for CSSE3010 on a Lubuntu 13.X VM.
-#
-# Download & run script: 
-#   file=setup-lubuntu-1310.sh
-#   url=http://bit.ly/1o8oe5O
-#   wget -O $file $url
-#   chmod +x $file
-#   ./$file
-#
-# OpenCV on Ubuntu: http://help.ubuntu.com/community/OpenCV
+
+info () { echo "[INFO] $1"; }
+
+# Download script:
+loadScript () {
+  file=setup-lubuntu-1310.sh
+  url=http://bit.ly/1o8oe5O
+  wget -O $file $url
+  chmod +x $file
+}
 
 #      1 2 3 4 5 6 7 8 9 10
 steps=(y y y y y y y y y n)
 #------------------------------------------------------------------------------------
-info () { echo "[INFO] $1"; }
+
 cd /home/csse3010
 
 # (1) Update/upgrade current packages
@@ -34,7 +35,6 @@ done
 }
 
 # (3) .vimrc, .bashrc
-
 [[ "${steps[2]}" == "y" ]] && {
 info "===Update .vimrc==="
 [[ -z "$(grep 'set background=' /home/csse3010/.vimrc )" ]] && \
@@ -67,6 +67,7 @@ sudo pip -q install mosquitto
 }
 
 # (6) OpenCV
+#     OpenCV on Ubuntu: http://help.ubuntu.com/community/OpenCV
 [[ "${steps[5]}" == "y" && ! -d /home/csse3010/OpenCV ]] && {
 info "===OpenCV==="
 version="2.4.8"
@@ -94,7 +95,7 @@ sudo make install
 sudo sh -c 'echo "/usr/local/lib" > /etc/ld.so.conf.d/opencv.conf'
 sudo ldconfig
 cd ..
-info "8 Remove precompiled headers (~1.5GB"
+info "8 Remove precompiled headers (~1.5GB)"
 find . -type f -name "*.gch" -exec rm -f {} \;
 cd ..
 info "OpenCV-$version installed"
