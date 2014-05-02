@@ -1,10 +1,11 @@
 #!/bin/bash
 
-sn=""
-while [ "$sn" == "" ]; do
+user=""
+while [ "$user" == "" ]; do
   echo "Enter your student username (e.g. s1234567@student.uq.edu.au)"
-  read -r sn
+  read -r user
 done
+sn=`cut -d'@' -f1 <<< "$user"`
 stype=""
 echo "[INFO] 1: Undergraduate"
 echo "[INFO] 2: Postgraduate (Masters)"
@@ -15,14 +16,13 @@ done
 
 [[ "$stype" == "1" ]] && course="csse3010" || course="csse7301"
 path=/home/csse3010/Documents
-mkdir -p $path
-cd $path
+mkdir -p $path && cd $path
 existingFolders="$(find `pwd` -type d -name 'csse3010-s*' -print0)"
 [[ ! -z "$existingFolders" ]] && {
   echo -e "[INFO] Student SVN folder(s) already exist:\n  $existingFolders"
   ans=""
   while [[ "$ans" != "y" && "$ans" != "n" ]]; do
-    echo -n "Remove folder? (y/n): "
+    echo -n "Remove folder(s)? (y/n): "
     read -r ans
   done
   if [ "$ans" == "y" ]; then
@@ -34,6 +34,6 @@ existingFolders="$(find `pwd` -type d -name 'csse3010-s*' -print0)"
   fi
 }
 
-echo "[INFO] SVN checkout for student $sn, course $course"
-git svn clone --username $sn https://source.eait.uq.edu.au/svn/$course-$sn
+echo "[INFO] SVN checkout for user $user, student $sn, course $course"
+git svn clone --username $user https://source.eait.uq.edu.au/svn/$course-$sn
 echo "[INFO] Repository checked out to ~/Documents/csse3010-$sn"
