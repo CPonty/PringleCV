@@ -38,6 +38,8 @@ info "  2  Update .vimrc"
 info "  3  Update .bashrc"
 [[ -z "$(grep 'alias vi=' /home/csse3010/.bashrc )" ]] && \
   echo "alias vi='vim'" >> /home/csse3010/.bashrc
+[[ -z "$(grep 'alias down=' /home/csse3010/.bashrc )" ]] && \
+  echo "alias down='sudo shutdown -h now'" >> /home/csse3010/.bashrc
 }
 
 # (3) Lxterminal Autostart
@@ -99,7 +101,7 @@ info "===Grub Config==="
 info "Edit: /etc/default/grub"
 sudo sed -i 's/^GRUB_HIDDEN_TIMEOUT=.*$/#GRUB_HIDDEN_TIMEOUT=3/g' /etc/default/grub
 sudo sed -i 's/^GRUB_HIDDEN_TIMEOUT_QUIET=.*$/#GRUB_HIDDEN_TIMEOUT_QUIET=false/g' /etc/default/grub
-sudo sed -i 's/^GRUB_TIMEOUT=.*$/GRUB_TIMEOUT=0/g' /etc/default/grub
+sudo sed -i 's/^GRUB_TIMEOUT=.*$/GRUB_TIMEOUT=10/g' /etc/default/grub
 sudo update-grub
 }
 
