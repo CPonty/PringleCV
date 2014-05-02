@@ -36,10 +36,13 @@ info "  2  Update .vimrc"
 [[ -z "$(grep 'set background=' /home/csse3010/.vimrc )" ]] && \
   echo "set background=dark" >> /home/csse3010/.vimrc
 info "  3  Update .bashrc"
-[[ -z "$(grep 'alias vi=' /home/csse3010/.bashrc )" ]] && \
-  echo "alias vi='vim'" >> /home/csse3010/.bashrc
-[[ -z "$(grep 'alias down=' /home/csse3010/.bashrc )" ]] && \
-  echo "alias down='sudo shutdown -h now'" >> /home/csse3010/.bashrc
+aliases="
+alias sudo='sudo '
+alias vi='vim'
+alias down='sudo shutdown -h now'
+alias reboot='shutdown -h'"
+grep "$aliases" /home/csse3010/.bashrc >/dev/null || \
+  echo "$aliases" >> /home/csse3010/.bashrc
 }
 
 # (3) Lxterminal Autostart
@@ -128,5 +131,5 @@ info "Install the VBox guest additions / VMWare tools after reboot"
 
 # (9) Reboot
 [[ "${steps[8]}" == "y" ]] && {
-sudo reboot now
+sudo shutdown -h now
 }
