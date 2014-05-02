@@ -1,14 +1,16 @@
 #!/bin/bash
 # Script to install PringleCV dependencies & tools for CSSE3010 on a Lubuntu 13.X VM.
+#
 # Download & run script: 
 #   url="https://raw.githubusercontent.com/CPonty/PringleCV/master/scripts/setup-lubuntu-1310.sh"
 #   wget "$url" 
 #   chmod +x setup-lubuntu-1310.sh
 #   ./setup-lubuntu-1310.sh
+#
 # OpenCV on Ubuntu: http://help.ubuntu.com/community/OpenCV
 
-#      1 2 3 4 5 6 7 8
-steps=(y y y y y y y n)
+#      1 2 3 4 5 6 7 8 9
+steps=(y y y y y y y y n)
 #------------------------------------------------------------------------------------
 info () { echo "[INFO] $1"; }
 cd /home/csse3010
@@ -20,29 +22,34 @@ sudo apt-get -y update
 sudo apt-get -y upgrade
 }
 
-# (2) Basics
+# (2) Basic Packages
 [[ "${steps[2]}" == "y" ]] && {
-info "===Basics==="
+info "===Basic Packages==="
 dependencies=('mosquitto' 'mosquitto-clients' 'vim' 'python-dev' 'guvcview' 'zerofree' 'git' 'subversion' 'git-svn' 'gitg' 'python-pip' 'dkms')
 for d in "${dependencies[@]}"; do
   info "Install: $d"
   sudo apt-get -qq -y install "$d"
 done
-info "Autostart: lxterminal"
+echo "set background=dark" >> /home/csse3010/.vimrc
+}
+
+# (3) Lxterminal Autostart
+[[ "${steps[3]}" == "y" ]] && {
+info "===LXTerminal Autostart==="
 autodir=/home/csse3010/.config/autostart
 mkdir -p "$autodir"
 cp /usr/share/applications/lxterminal.desktop "$autodir"
 }
 
-# (3) Python packages
-[[ "${steps[3]}" == "y" ]] && {
+# (4) Python packages
+[[ "${steps[4]}" == "y" ]] && {
 info "===Python==="
 info "Install: mosquitto (mqtt)"
 sudo pip -q install mosquitto
 }
 
-# (4) OpenCV
-[[ "${steps[4]}" == "y" ]] && {
+# (5) OpenCV
+[[ "${steps[5]}" == "y" ]] && {
 info "===OpenCV==="
 version="2.4.8"
 mkdir -p "OpenCV"
@@ -67,12 +74,17 @@ info "7 Installing OpenCV"
 sudo make install
 sudo sh -c 'echo "/usr/local/lib" > /etc/ld.so.conf.d/opencv.conf'
 sudo ldconfig
-cd ../..
+cd ..
+info "8 Remove files"
+#
+#
+#
+cd ..
 info "OpenCV-$version installed"
 }
 
-# (5) Grub config
-[[ "${steps[5]}" == "y" ]] && {
+# (6) Grub config
+[[ "${steps[6]}" == "y" ]] && {
 info "===Grub Config==="
 info "Edit: /etc/default/grub"
 sed -i 's/^GRUB_HIDDEN_TIMEOUT=.*$/#GRUB_HIDDEN_TIMEOUT=3/g' /etc/default/grub
@@ -80,15 +92,18 @@ sed -i 's/^GRUB_HIDDEN_TIMEOUT_QUIET=.*$/#GRUB_HIDDEN_TIMEOUT_QUIET=false/g' /et
 sed -i 's/^GRUB_TIMEOUT=.*$/GRUB_TIMEOUT=0/g' /etc/default/grub
 sudo update-grub
 
-# (6) PringleCV
-[[ "${steps[6]}" == "y" ]] && {
+# (7) PringleCV
+[[ "${steps[7]}" == "y" ]] && {
 cd /home/csse3010
 repo=https://github.com/CPonty/PringleCV.git
 git clone "$repo" || echo "[ERROR] Git checkout failed"
 }
 
-# (7) Git/SVN Setup
-[[ "${steps[7]}" == "y" ]] && {
+# (8) Git/SVN Setup
+[[ "${steps[8]}" == "y" ]] && {
+cd /home/csse3010
+cp PringleCV/scripts/git-svn-setup.sh .
+chmod +x git-svn-setup.sh
 }
 
 # (*) Done
@@ -100,7 +115,7 @@ info "Installation finished."
 info "Reboot required to finish some upgrades"
 info "Install the VBox guest additions / VMWare tools after reboot"
 
-# (8) Reboot
-[[ "${steps[8]}" == "y" ]] && {
-sudo shutdown -h now
+# (9) Reboot
+[[ "${steps[9]}" == "y" ]] && {
+sudo reboot now
 }
