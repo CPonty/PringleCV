@@ -7,18 +7,22 @@
 #   ./setup-lubuntu-1310.sh
 # OpenCV on Ubuntu: http://help.ubuntu.com/community/OpenCV
 
-#      1 2 3 4 5 6 7
-steps=(y y y y y y n)
+#      1 2 3 4 5 6 7 8
+steps=(y y y y y y y n)
 #------------------------------------------------------------------------------------
 info () { echo "[INFO] $1"; }
 cd /home/csse3010
 
-# (1) Basics
+# (1) Update/upgrade current packages
 [[ "${steps[1]}" == "y" ]] && {
+info "===Update/Upgrade==="
+sudo apt-get -y update
+sudo apt-get -y upgrade
+}
+
+# (2) Basics
+[[ "${steps[2]}" == "y" ]] && {
 info "===Basics==="
-info "apt-get update"
-sudo apt-get -qq -y update
-sudo apt-get -qq -y upgrade
 dependencies=('mosquitto' 'mosquitto-clients' 'vim' 'python-dev' 'guvcview' 'zerofree' 'git' 'subversion' 'git-svn' 'gitg' 'python-pip' 'dkms')
 for d in "${dependencies[@]}"; do
   info "Install: $d"
@@ -30,15 +34,15 @@ mkdir -p "$autodir"
 cp /usr/share/applications/lxterminal.desktop "$autodir"
 }
 
-# (2) Python packages
-[[ "${steps[2]}" == "y" ]] && {
+# (3) Python packages
+[[ "${steps[3]}" == "y" ]] && {
 info "===Python==="
 info "Install: mosquitto (mqtt)"
 sudo pip -q install mosquitto
 }
 
-# (3) OpenCV
-[[ "${steps[3]}" == "y" ]] && {
+# (4) OpenCV
+[[ "${steps[4]}" == "y" ]] && {
 info "===OpenCV==="
 version="2.4.8"
 mkdir -p "OpenCV"
@@ -67,8 +71,8 @@ cd ../..
 info "OpenCV-$version installed"
 }
 
-# (4) Grub config
-[[ "${steps[4]}" == "y" ]] && {
+# (5) Grub config
+[[ "${steps[5]}" == "y" ]] && {
 info "===Grub Config==="
 info "Edit: /etc/default/grub"
 sed -i 's/^GRUB_HIDDEN_TIMEOUT=.*$/#GRUB_HIDDEN_TIMEOUT=3/g' /etc/default/grub
