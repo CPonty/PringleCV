@@ -10,8 +10,8 @@
 #
 # OpenCV on Ubuntu: http://help.ubuntu.com/community/OpenCV
 
-#      1 2 3 4 5 6 7 8 9
-steps=(y y y y y y y y n)
+#      1 2 3 4 5 6 7 8 9 10
+steps=(y y y y y y y y y n)
 #------------------------------------------------------------------------------------
 info () { echo "[INFO] $1"; }
 cd /home/csse3010
@@ -113,6 +113,7 @@ sudo update-grub
 }
 
 # (8) PringleCV
+info "===PringleCV==="
 [[ "${steps[7]}" == "y" && ! -d /home/csse3010/PringleCV ]] && {
 cd /home/csse3010
 repo=https://github.com/CPonty/PringleCV.git
@@ -121,6 +122,7 @@ git clone "$repo" || echo "[ERROR] Git checkout failed"
 
 # (9) Git/SVN Setup
 [[ "${steps[8]}" == "y" ]] && {
+info "===git-svn-setup==="
 cd /home/csse3010
 cp PringleCV/scripts/git-svn-setup.sh .
 chmod +x git-svn-setup.sh
