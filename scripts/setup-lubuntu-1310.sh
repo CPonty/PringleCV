@@ -26,16 +26,20 @@ sudo apt-get -y upgrade
 # (2) Basic Packages
 [[ "${steps[1]}" == "y" ]] && {
 info "===Basic Packages==="
-info "  1  Install packages"
 dependencies=('mosquitto' 'mosquitto-clients' 'vim' 'python-dev' 'guvcview' 'zerofree' 'git' 'subversion' 'git-svn' 'gitg' 'python-pip' 'dkms')
 for d in "${dependencies[@]}"; do
   info "Install: $d"
   sudo apt-get -y install "$d"
 done
-info "  2  Update .vimrc"
+}
+
+# (3) .vimrc, .bashrc
+
+[[ "${steps[2]}" == "y" ]] && {
+info "===Update .vimrc==="
 [[ -z "$(grep 'set background=' /home/csse3010/.vimrc )" ]] && \
   echo "set background=dark" >> /home/csse3010/.vimrc
-info "  3  Update .bashrc"
+info "===Update .bashrc==="
 aliases="
 alias sudo='sudo '
 alias vi='vim'
@@ -45,8 +49,8 @@ grep "$aliases" /home/csse3010/.bashrc >/dev/null || \
   echo "$aliases" >> /home/csse3010/.bashrc
 }
 
-# (3) Lxterminal Autostart
-[[ "${steps[2]}" == "y" ]] && {
+# (4) Lxterminal Autostart
+[[ "${steps[3]}" == "y" ]] && {
 info "===LXTerminal Autostart==="
 autodir=/home/csse3010/.config/autostart
 mkdir -p $autodir
@@ -55,15 +59,15 @@ sed -i 's/^disable_autostart=.*$/disable_autostart=no/g' \
   /home/csse3010/.config/lxsession/Lubuntu/desktop.conf
 }
 
-# (4) Python packages
-[[ "${steps[3]}" == "y" ]] && {
+# (5) Python packages
+[[ "${steps[4]}" == "y" ]] && {
 info "===Python==="
 info "Install: mosquitto (mqtt)"
 sudo pip -q install mosquitto
 }
 
-# (5) OpenCV
-[[ "${steps[4]}" == "y" && ! -d /home/csse3010/OpenCV ]] && {
+# (6) OpenCV
+[[ "${steps[5]}" == "y" && ! -d /home/csse3010/OpenCV ]] && {
 info "===OpenCV==="
 version="2.4.8"
 cd /home/csse3010
@@ -98,8 +102,8 @@ info "Size of partition: $(df -h .)"
 info "Size of OpenCV: $(du -sh /home/csse3010/OpenCV)"
 }
 
-# (6) Grub config
-[[ "${steps[5]}" == "y" ]] && {
+# (7) Grub config
+[[ "${steps[6]}" == "y" ]] && {
 info "===Grub Config==="
 info "Edit: /etc/default/grub"
 sudo sed -i 's/^GRUB_HIDDEN_TIMEOUT=.*$/#GRUB_HIDDEN_TIMEOUT=3/g' /etc/default/grub
@@ -108,15 +112,15 @@ sudo sed -i 's/^GRUB_TIMEOUT=.*$/GRUB_TIMEOUT=10/g' /etc/default/grub
 sudo update-grub
 }
 
-# (7) PringleCV
-[[ "${steps[6]}" == "y" && ! -d /home/csse3010/PringleCV ]] && {
+# (8) PringleCV
+[[ "${steps[7]}" == "y" && ! -d /home/csse3010/PringleCV ]] && {
 cd /home/csse3010
 repo=https://github.com/CPonty/PringleCV.git
 git clone "$repo" || echo "[ERROR] Git checkout failed"
 }
 
-# (8) Git/SVN Setup
-[[ "${steps[7]}" == "y" ]] && {
+# (9) Git/SVN Setup
+[[ "${steps[8]}" == "y" ]] && {
 cd /home/csse3010
 cp PringleCV/scripts/git-svn-setup.sh .
 chmod +x git-svn-setup.sh
@@ -129,7 +133,7 @@ info "Installation finished."
 info "Reboot required to finish some upgrades"
 info "Install the VBox guest additions / VMWare tools after reboot"
 
-# (9) Reboot
-[[ "${steps[8]}" == "y" ]] && {
+# (10) Reboot
+[[ "${steps[9]}" == "y" ]] && {
 sudo shutdown -h now
 }
