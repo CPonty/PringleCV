@@ -44,7 +44,7 @@ info "===Basic Packages==="
 packages=('mosquitto' 'mosquitto-clients' 'vim' 'python-dev' 'guvcview' 'zerofree' 'git' 'subversion' 'git-svn' 'gitg' 'python-pip' 'dkms')
 for p in "${packages[@]}"; do
   info "Install: $p"
-  sudo apt-get -y install "$p"
+  sudo apt-get -qq -y install "$p"
 done
 }
 
@@ -52,13 +52,24 @@ done
 #     alias sudo='sudo ' allows other aliases to work when prefixed by sudo 
 [[ "${steps[2]}" == "y" ]] && {
 info "===Update .vimrc==="
-[[ -z "$(grep 'set background=' $HOME/.vimrc )" ]] && \
-  echo "set background=dark" >> $HOME/.vimrc
+vimlines=("set background=dark")
+for l in "${vimlines[@]}"; do
+  [[ -z `grep "$(cut -d'=' -f1 <<< "$l")=" $HOME/.vimrc` ]] && {
+    info "$l"
+    echo "$l" >> $HOME/.vimrc
+  } || {
+    info "Skip: $l"
+  }
+done
 info "===Update .bashrc==="
 aliases=("alias sudo='sudo '" "alias vi='vim'" "alias down='sudo shutdown -h now'" "alias reboot='shutdown -h'")
 for a in "${aliases[@]}"; do
-  [[ -z `grep $(cut -d'=' -f1 <<< "$a")= $HOME/.bashrc` ]] && \
+  [[ -z `grep "$(cut -d'=' -f1 <<< "$a")=" $HOME/.bashrc` ]] && {
+    info "$a"
     echo "$a" >> $HOME/.bashrc
+  } || {
+    info "Skip: $a"
+  }
 done
 }
 
@@ -67,9 +78,11 @@ done
 info "===LXTerminal Autostart==="
 autodir=$HOME/.config/autostart
 mkdir -p $autodir && cd $autodir
+info "Add: ~/.config/autostart/lxterminal.desktop"
 cp /usr/share/applications/lxterminal.desktop .
 sed -i 's/^disable_autostart=.*$/disable_autostart=no/g' \
-  $HOME/.config/lxsession/Lubuntu/desktop.conf
+  $HOME/.config/lxsession/Lubuntu/desktop.conf && \
+  info "disable_autostart=no"
 }
 
 # (5) Python packages
@@ -114,6 +127,9 @@ info "OpenCV-$version installed"
 info "Size of partition: $(df -h .)"
 info "Size of OpenCV: $(du -sh $HOME/OpenCV)"
 }
+[[ "${steps[5]}" == "y" && -d $HOME/OpenCV ]] && {
+  info "Skip - $HOME/OpenCV exists"
+}
 
 # (7) Grub config - open on startup
 [[ "${steps[6]}" == "y" ]] && {
@@ -133,14 +149,17 @@ cd $HOME
 repo=https://github.com/CPonty/PringleCV.git
 git clone "$repo" || echo "[ERROR] Git checkout failed"
 }
+[[ "${steps[7]}" == "y" && -d $HOME/PringleCV ]] && {
+  info "Skip - $HOME/PringleCV exists"
+}
 
 # (9) Git/SVN Setup
 [[ "${steps[8]}" == "y" ]] && {
 info "===git-svn-setup==="
 docdir=$HOME/Documents
-cd $HOME
-cp PringleCV/scripts/git-svn-setup.sh . && chmod +x git-svn-setup.sh
 mkdir -p $docdir && cd $docdir
+cp $HOME/PringleCV/scripts/git-svn-setup.sh . && chmod +x git-svn-setup.sh
+cd $HOME
 svn co https://source.eait.uq.edu.au/svn/csse3010/trunk np2_svn \
 --username csse3010@svn.itee.uq.edu.au --password csse3010 <<< "
 no
@@ -151,7 +170,7 @@ no
 [[ "${steps[9]}" == "y" ]] && {
 echo "===Sudo nopasswd==="
 file=$HOME/PringleCV/scripts/sudo-nopasswd.sh
-chmod +x $file && ./$file.sh
+chmod +x $file && $file
 }
 
 # (*) Done
