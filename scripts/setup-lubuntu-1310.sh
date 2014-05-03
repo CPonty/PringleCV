@@ -1,21 +1,32 @@
 #!/bin/bash
 # Script to install PringleCV dependencies & tools for CSSE3010 on a Lubuntu 13.X VM.
 
-info () { echo "[INFO] $1"; }
+#      1 2 3 4 5 6 7 8 9 10
+steps=(y y y y y y y y y y)
+# (1) Update/upgrade current packages
+# (2) Add Packages
+# (3) .vimrc, .bashrc
+# (4) Lxterminal autostart at login
+# (5) Python packages
+# (6) OpenCV
+# (7) Grub config - open on startup
+# (8) Download PringleCV
+# (9) Git/SVN Setup
+# (10) Sudo: set nopasswd for user
+#------------------------------------------------------------------------------
 
-# Download script:
+info () { echo "[INFO] $1"; }
+lineSpam () { printf "\n%.0s" {1..100}; }
+
 loadScript () {
+  #download this script
   file=setup-lubuntu-1310.sh
   url=http://bit.ly/1o8oe5O
   wget -O $file $url
   chmod +x $file
 }
 
-#      1 2 3 4 5 6 7 8 9 10
-steps=(y y y y y y y y y n)
-#------------------------------------------------------------------------------------
-
-cd /home/csse3010
+cd $HOME
 
 # (1) Update/upgrade current packages
 [[ "${steps[0]}" == "y" ]] && {
@@ -24,39 +35,41 @@ sudo apt-get -y update
 sudo apt-get -y upgrade
 }
 
-# (2) Basic Packages
+# (2) Add Packages
+#     zerofree: utility for zeroing free memory blocks via grub
+#       run & clone the VM to minimize disk filesize
+#     dkms: install before virtualbox guest additions to avoid problems
 [[ "${steps[1]}" == "y" ]] && {
 info "===Basic Packages==="
-dependencies=('mosquitto' 'mosquitto-clients' 'vim' 'python-dev' 'guvcview' 'zerofree' 'git' 'subversion' 'git-svn' 'gitg' 'python-pip' 'dkms')
-for d in "${dependencies[@]}"; do
-  info "Install: $d"
-  sudo apt-get -y install "$d"
+packages=('mosquitto' 'mosquitto-clients' 'vim' 'python-dev' 'guvcview' 'zerofree' 'git' 'subversion' 'git-svn' 'gitg' 'python-pip' 'dkms')
+for p in "${packages[@]}"; do
+  info "Install: $p"
+  sudo apt-get -y install "$p"
 done
 }
 
 # (3) .vimrc, .bashrc
+#     alias sudo='sudo ' allows other aliases to work when prefixed by sudo 
 [[ "${steps[2]}" == "y" ]] && {
 info "===Update .vimrc==="
-[[ -z "$(grep 'set background=' /home/csse3010/.vimrc )" ]] && \
-  echo "set background=dark" >> /home/csse3010/.vimrc
+[[ -z "$(grep 'set background=' $HOME/.vimrc )" ]] && \
+  echo "set background=dark" >> $HOME/.vimrc
 info "===Update .bashrc==="
-aliases="
-alias sudo='sudo '
-alias vi='vim'
-alias down='sudo shutdown -h now'
-alias reboot='shutdown -h'"
-[[ -z `grep "alias reboot=" /home/csse3010/.bashrc` ]] && \
-  echo "$aliases" >> /home/csse3010/.bashrc
+aliases=("alias sudo='sudo '" "alias vi='vim'" "alias down='sudo shutdown -h now'" "alias reboot='shutdown -h'")
+for a in "${aliases[@]}"; do
+  [[ -z `grep $(cut -d'=' -f1 <<< "$a")= $HOME/.bashrc` ]] && \
+    echo "$a" >> $HOME/.bashrc
+done
 }
 
-# (4) Lxterminal Autostart
+# (4) Lxterminal autostart at login
 [[ "${steps[3]}" == "y" ]] && {
 info "===LXTerminal Autostart==="
-autodir=/home/csse3010/.config/autostart
+autodir=$HOME/.config/autostart
 mkdir -p $autodir && cd $autodir
 cp /usr/share/applications/lxterminal.desktop .
 sed -i 's/^disable_autostart=.*$/disable_autostart=no/g' \
-  /home/csse3010/.config/lxsession/Lubuntu/desktop.conf
+  $HOME/.config/lxsession/Lubuntu/desktop.conf
 }
 
 # (5) Python packages
@@ -68,10 +81,10 @@ sudo pip -q install mosquitto
 
 # (6) OpenCV
 #     OpenCV on Ubuntu: http://help.ubuntu.com/community/OpenCV
-[[ "${steps[5]}" == "y" && ! -d /home/csse3010/OpenCV ]] && {
+[[ "${steps[5]}" == "y" && ! -d $HOME/OpenCV ]] && {
 info "===OpenCV==="
 version="2.4.8"
-cvdir=/home/csse3010/OpenCV
+cvdir=$HOME/OpenCV
 mkdir -p $cvdir && cd $cvdir
 info "1 Removing pre-installed clashing libraries"
 sudo apt-get -qq -y remove ffmpeg x264 libx264-dev
@@ -99,23 +112,24 @@ find . -type f -name "*.gch" -exec rm -f {} \;
 cd ..
 info "OpenCV-$version installed"
 info "Size of partition: $(df -h .)"
-info "Size of OpenCV: $(du -sh /home/csse3010/OpenCV)"
+info "Size of OpenCV: $(du -sh $HOME/OpenCV)"
 }
 
-# (7) Grub config
+# (7) Grub config - open on startup
 [[ "${steps[6]}" == "y" ]] && {
 info "===Grub Config==="
-info "Edit: /etc/default/grub"
-sudo sed -i 's/^GRUB_HIDDEN_TIMEOUT=.*$/#GRUB_HIDDEN_TIMEOUT=3/g' /etc/default/grub
-sudo sed -i 's/^GRUB_HIDDEN_TIMEOUT_QUIET=.*$/#GRUB_HIDDEN_TIMEOUT_QUIET=false/g' /etc/default/grub
-sudo sed -i 's/^GRUB_TIMEOUT=.*$/GRUB_TIMEOUT=10/g' /etc/default/grub
+grubfile=/etc/default/grub
+info "Edit: $grubfile"
+sudo sed -i 's/^GRUB_HIDDEN_TIMEOUT=.*$/#GRUB_HIDDEN_TIMEOUT=3/g' $grubfile
+sudo sed -i 's/^GRUB_HIDDEN_TIMEOUT_QUIET=.*$/#GRUB_HIDDEN_TIMEOUT_QUIET=false/g' $grubfile
+sudo sed -i 's/^GRUB_TIMEOUT=.*$/GRUB_TIMEOUT=10/g' $grubfile
 sudo update-grub
 }
 
-# (8) PringleCV
+# (8) Clone PringleCV
 info "===PringleCV==="
-[[ "${steps[7]}" == "y" && ! -d /home/csse3010/PringleCV ]] && {
-cd /home/csse3010
+[[ "${steps[7]}" == "y" && ! -d $HOME/PringleCV ]] && {
+cd $HOME
 repo=https://github.com/CPonty/PringleCV.git
 git clone "$repo" || echo "[ERROR] Git checkout failed"
 }
@@ -123,14 +137,21 @@ git clone "$repo" || echo "[ERROR] Git checkout failed"
 # (9) Git/SVN Setup
 [[ "${steps[8]}" == "y" ]] && {
 info "===git-svn-setup==="
-docdir=/home/csse3010/Documents
+docdir=$HOME/Documents
+cd $HOME
+cp PringleCV/scripts/git-svn-setup.sh . && chmod +x git-svn-setup.sh
 mkdir -p $docdir && cd $docdir
-cp PringleCV/scripts/git-svn-setup.sh .
-chmod +x git-svn-setup.sh
 svn co https://source.eait.uq.edu.au/svn/csse3010/trunk np2_svn \
 --username csse3010@svn.itee.uq.edu.au --password csse3010 <<< "
 no
 "
+}
+
+# (10) Sudo: set nopasswd for user
+[[ "${steps[9]}" == "y" ]] && {
+echo "===Sudo nopasswd==="
+file=$HOME/PringleCV/scripts/sudo-nopasswd.sh
+chmod +x $file && ./$file.sh
 }
 
 # (*) Done
@@ -139,8 +160,3 @@ info ""
 info "Installation finished." 
 info "Reboot required to finish some upgrades"
 info "Install the VBox guest additions / VMWare tools after reboot"
-
-# (10) Reboot
-[[ "${steps[9]}" == "y" ]] && {
-sudo shutdown -h now
-}
