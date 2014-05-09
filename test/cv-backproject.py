@@ -9,10 +9,19 @@ import matplotlib.pyplot as plt
 from time import time, sleep
 import numpy as np
 import cv2
+import sys
 
 cap = cv2.VideoCapture(0)
 
 print "Press 'q' to quit"
+
+BLOB_TRACK=True
+HIST_RESAMPLE=True
+HIST_PLOT=False
+HSV_H0=120
+HSV_H1=50
+HSV_S0=30
+HSV_S1=255
 
 t = [time()]
 fps=0
@@ -21,9 +30,10 @@ f=0
 src=1
 grab=False
 im=None
-imArray=[None,None,None,None,None]
+imArray=[None]*7
 roi=None
 roiHist=None
+trackingHist=None
 drawBox=False
 pause=False
 threshVal=50
@@ -44,17 +54,21 @@ def keyboard():
     k = (cv2.waitKey(1) & 0xFF)
     if k == ord('q'):
         return True
-    elif ( ord('1')<=k<=ord('4')):
+    elif ( ord('1')<=k<=ord('6')):
         src=k-ord('0')
         print 'source',src
     elif k == ord('p'):
         pause = not(pause)
     elif k == ord('g'):
         grab=True
-        if pause: src=2
-        else: src=1
+        if pause: 
+            src=2
+            print "done"
+        else: 
+            src=1
+            print 'sampling...',
+            sys.stdout.flush()
         pause = not(pause)
-        print 'sampling'
     elif k == ord('['):
         threshVal = max(0,threshVal-3)
         print "threshVal=", threshVal
@@ -69,9 +83,13 @@ def display():
     imArray[1] = imArray[0].copy()
     cv2.rectangle(imArray[1],(xx,yy),(xx+ww,yy+hh),(0,255,0),2)
     cv2.imshow('im',imArray[src])
+    if trackingHist!=None: cv2.imshow('trackHist',trackingHist)
+    if roiHist!=None: cv2.imshow('roiHist',roiHist)
 
 #----------------------------------------------------------------------
 cv2.namedWindow('im')
+cv2.namedWindow('trackHist')
+cv2.namedWindow('roiHist')
 cv2.setMouseCallback('im',mouseclick)
 
 while(True):
@@ -80,18 +98,25 @@ while(True):
     if pause: sleep(0.05); continue
 
     # Grab RoI
-    if (grab==True and imArray[0]!=None):
+    if (grab==True and imArray[0]!=None and ww>2 and hh>2):
         roi = im[yy:yy+hh, xx:xx+ww]
         hsv = cv2.cvtColor(roi,cv2.COLOR_BGR2HSV)
-        roiHist = cv2.calcHist([hsv],[0,1], None, [180,256], [0,180,0,256])
-        cv2.normalize(roiHist,roiHist,0,255,cv2.NORM_MINMAX)
+        roiHist= cv2.calcHist([hsv],[0,1], None, [180,256], [0,180,0,256])
+        #cv2.normalize(roiHist,roiHist,0,255,cv2.NORM_MINMAX)
+        trackingHist = roiHist.copy()
+        #plot histogram. gotta go fast!
+        if HIST_PLOT: 
+            plt.imshow(roiHist,interpolation = 'nearest')
+            plt.show()
+        #
         grab=False
         src=2
+        
 
     # Capture frame-by-frame
     ret, im = cap.read()
     im = cv2.medianBlur(im, 5)
-    imArray=[im.copy() for i in xrange(5)]
+    imArray=[im.copy() for i in xrange(len(imArray))]
 
     t.append(time())
     if len(t)>30: 
@@ -120,7 +145,7 @@ while(True):
 #         #im_t = np.vstack((im_t,thresh,res))
 
         hsvt = cv2.cvtColor(im,cv2.COLOR_BGR2HSV)
-        dst = cv2.calcBackProject([hsvt],[0,1],roiHist,[0,180,0,256],1)
+        dst = cv2.calcBackProject([hsvt],[0,1],trackingHist,[0,180,0,256],1)
         # Now convolute with circular disc
         disc = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
         cv2.filter2D(dst,-1,disc,dst)
@@ -130,8 +155,97 @@ while(True):
         ret,thresh = cv2.threshold(dst,threshVal,255,0)
         imArray[3] = thresh
         thresh3 = cv2.merge((thresh,thresh,thresh)) #threshold, 3-channel
-        imArray[4] = cv2.bitwise_and(im,thresh3) #combined image
+        img4 = cv2.bitwise_and(im,thresh3) #combined image
+        imArray[4] = img4
         #res = np.vstack((target,thresh,res))
+
+        #test: blob tracking; redo the histogram
+        # BLOB_TRACK #
+        if BLOB_TRACK==False: continue
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+        kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(8,8))
+        cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel,thresh)
+        cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,thresh)
+        cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel2,thresh)
+        thresh2 = thresh.copy()
+        contours,hierarchy = cv2.findContours(thresh,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_SIMPLE)
+        best_cnt = None
+        bestCntHullArea = 0
+        cntCandidates = []
+        for i,cnt in enumerate(contours):
+            area = cv2.contourArea(cnt)
+            x,y,w,h = cv2.boundingRect(cnt)
+            # ignoring obvious fails will save a lot of processing power
+            if hierarchy[0,i,3]!=-1: continue #top-level contour, parent==-1
+            if (w<25 or h<25 or area<(25*25)): continue
+            hull = cv2.convexHull(cnt)
+            hullArea = cv2.contourArea(hull)
+            minRect = cv2.minAreaRect(cnt)
+            minRect = np.int0(cv2.cv.BoxPoints(minRect))
+            bboxCnt = cv2.convexHull(minRect)
+            bboxArea = cv2.contourArea(bboxCnt)
+            cntArcLen = cv2.arcLength(cnt,True)
+            cntArea = cv2.contourArea(cnt)
+            hullVsBbox = float(hullArea)/bboxArea*100
+            cntVsHull = float(cntArea)/hullArea*100
+            cntVsBbox = float(cntArea)/bboxArea*100
+            # only replace if it's bigger
+            if (hullArea > bestCntHullArea):
+                bestCntHullArea = hullArea
+                best_cnt = cnt
+            cntCandidates.append(cnt)
+        #cv2.drawContours(img4,cntCandidates,-1,(255,255,255),cv2.cv.CV_FILLED)
+        cv2.drawContours(img4,cntCandidates,-1,(255,0,255),thickness=2)
+        cv2.drawContours(imArray[5],cntCandidates,-1,(255,0,255),thickness=2)
+        #print len(cntCandidates)
+        if (best_cnt != None):
+            M = cv2.moments(best_cnt)
+            cx,cy = int(M['m10']/M['m00']), int(M['m01']/M['m00'])
+            cv2.circle(img4,(cx,cy),5,(0,255,0),-1)
+            cv2.circle(imArray[5],(cx,cy),5,(0,255,0),-1)
+            x,y,w,h = cv2.boundingRect(best_cnt)
+            cv2.rectangle(img4,(x,y),(x+w,y+h),(0,255,0),1)
+            cv2.rectangle(imArray[5],(x,y),(x+w,y+h),(0,255,0),1)
+            minRect = cv2.minAreaRect(best_cnt)
+            minRect = np.int0(cv2.cv.BoxPoints(minRect))
+            cv2.drawContours(img4,[minRect],0,(0,255,255),1)
+            cv2.drawContours(imArray[5],[minRect],0,(0,255,255),1)
+            hull = cv2.convexHull(best_cnt)
+            cv2.drawContours(img4,[hull],0,(255,255,0),1)
+            cv2.drawContours(imArray[5],[hull],0,(255,255,0),1)
+            bestCntArc = cv2.arcLength(best_cnt,True)
+            #load new images
+            imArray[3] = thresh2
+            imArray[4] = img4
+            # HIST_RESAMPLE #
+            if HIST_RESAMPLE==False: continue
+            #create mask of best_cnt & resample a new RoI (hull area)
+            hsv = cv2.cvtColor(im,cv2.COLOR_BGR2HSV)
+            mask = np.zeros((hsv.shape[0],hsv.shape[1],1),np.uint8)
+            cv2.drawContours(mask,[best_cnt],0,255,-1)
+            #cv2.drawContours(mask,[hull],0,255,-1)
+#            #cv2.bitwise_and(mask,imArray[6]) #grayscale vs RBG - cvtColor
+            imArray[6] = mask
+            #pixelpoints = np.transpose(np.nonzero(mask))
+            #resample RoI
+            roiHist2 = roiHist.copy()
+            cv2.normalize(roiHist,roiHist,0,255,cv2.NORM_MINMAX)
+            hist2 = cv2.calcHist([hsv],[0,1], mask, [180,256], [0,180,0,256])
+            cv2.normalize(hist2,hist2,0,255,cv2.NORM_MINMAX)
+            trackingHist = cv2.add(roiHist2, hist2)
+            #zero the histogram outside the hue/sat bounds
+            #y,x  y:hue x:sat
+#            trackingHist[HSV_H0:HSV_H1, :] = 0
+#            trackingHist[: ,HSV_S0:HSV_S1] = 0
+            hist3 = np.zeros(trackingHist.shape, np.uint8)
+            #hist3[0:HSV_H1,HSV_S0:HSV_S1] = \
+            #    trackingHist[0:HSV_H1,HSV_S0:HSV_S1]
+            #hist3[HSV_H0:180,HSV_S0:HSV_S1] = \
+            #    trackingHist[HSV_H0:180,HSV_S0:HSV_S1]
+            #trackingHist = hist3
+            #
+            cv2.normalize(trackingHist,trackingHist,0,255,cv2.NORM_MINMAX)
+
 
 #----------------------------------------------------------------------
 
