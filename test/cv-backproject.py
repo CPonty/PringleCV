@@ -38,12 +38,11 @@ HIST_FRAC=0.5
 HIST_MIN_STRENGTH=5
 HIST_ROI_DILATION=0
 HIST_SAMP_DILATION=0
-HSV_H0=3
-HSV_H1=171
+HSV_H0=10
+HSV_H1=160
 HSV_S0=0
 HSV_S1=30
 HSV_S2=60
-HSV_V0=55
 K1SIZE=5
 K2SIZE=10
 threshVal=60
@@ -127,7 +126,7 @@ def display():
 
 cv2.namedWindow('im')
 cv2.namedWindow('hist(roi,hist2,track)')
-cv2.setMouseCallback('im',mouseclick)
+#cv2.setMouseCallback('im',mouseclick)
 
 trackingHist=np.zeros((180,256),np.uint8)
 hist=np.zeros((180,256),np.uint8)
@@ -136,14 +135,14 @@ roiHist=np.zeros((180,256),np.uint8)
 roiHist2=np.zeros((180,256),np.uint8)
 #cv2.rectangle(trackingHist,(140,175),(250,180),255,-1)
 #cv2.rectangle(trackingHist,(140,0),(250,2),255,-1)
-#cv2.rectangle(trackingHist,(40,75),(250,180),255,-1)
-#cv2.rectangle(trackingHist,(40,0),(250,92),255,-1)
+cv2.rectangle(trackingHist,(40,75),(250,180),255,-1)
+cv2.rectangle(trackingHist,(40,0),(250,92),255,-1)
 
 roiHist2= cv2.calcHist(np.zeros((480,640),np.uint8),[0,1], None, [180,256], [0,180,0,256])
 roiHist2[:,:] = 0
-cv2.rectangle(roiHist2,(140,174),(250,180),255,-1)
-cv2.rectangle(roiHist2,(140,0),(250,3),255,-1)
 trackingHist=roiHist2.copy()
+cv2.rectangle(trackingHist,(140,174),(250,180),255,-1)
+cv2.rectangle(trackingHist,(140,0),(250,3),255,-1)
 
 #print "max",np.max(trackingHist),"shape",trackingHist.shape
 #cv2.imshow('trackhist',trackingHist)
@@ -173,9 +172,9 @@ while(True):
         print "max",np.max(roiHist2),"mean",np.mean(roiHist2)
         trackingHist = roiHist.copy()
         #plot histogram. gotta go fast!
-        if HIST_PLOT: 
-            plt.imshow(roiHist,interpolation = 'nearest')
-            plt.show()
+        #if HIST_PLOT: 
+        #    plt.imshow(roiHist,interpolation = 'nearest')
+        #    plt.show()
         #
         grab=False
         src=2
@@ -213,18 +212,12 @@ while(True):
 #         #im_t = np.vstack((im_t,thresh,res))
 
         hsvt = cv2.cvtColor(im,cv2.COLOR_BGR2HSV)
-        hue,sat,val = cv2.split(hsvt)
         #print "hist avg",np.mean(trackingHist)
         dst = cv2.calcBackProject([hsvt],[0,1],trackingHist,[0,180,0,256],1)
         # Now convolute with circular disc
         disc = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
         cv2.filter2D(dst,-1,disc,dst)
         #print "dst max",np.max(dst),"hist avg",np.mean(trackingHist)
-#TODO minimum brightness
-        vmask = val.copy()
-        vmask[vmask < HSV_V0] = 0
-        vmask[vmask > 0] = 255
-        dst= cv2.bitwise_and(dst, vmask)
 
         # threshold and binary AND
         imArray[2] = dst #grayscale distance
@@ -361,8 +354,8 @@ while(True):
             #
 #            cv2.normalize(trackingHist,trackingHist,0,255,cv2.NORM_MINMAX)
 #TODO mandatory match - certain band of red
-            #cv2.rectangle(trackingHist,(140,175),(250,180),255,-1)
-            #cv2.rectangle(trackingHist,(140,0),(250,2),255,-1)
+            cv2.rectangle(trackingHist,(140,175),(250,180),255,-1)
+            cv2.rectangle(trackingHist,(140,0),(250,2),255,-1)
 
 
 #----------------------------------------------------------------------
@@ -370,4 +363,3 @@ while(True):
 # When everything done, release the capture
 cap.release()
 cv2.destroyAllWindows()
-
