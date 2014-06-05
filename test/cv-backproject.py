@@ -30,7 +30,7 @@ purge_pyc()
 cap = cv2.VideoCapture(0)
 print "Press 'q' to quit"
 
-FPS_PRINT=True
+FPS_PRINT=False
 BLOB_TRACK=True
 HIST_RESAMPLE=True
 HIST_PLOT=False
@@ -43,8 +43,14 @@ HSV_H1=160
 HSV_S0=0
 HSV_S1=30
 HSV_S2=60
+HSV_V0=40
 K1SIZE=5
 K2SIZE=10
+TELEMETRY = {
+    "x": None,
+    "y": None,
+    "w": None
+}
 threshVal=60
 
 t = [time()]
@@ -62,8 +68,6 @@ hist2=np.zeros((180,256),np.uint8)
 trackingHist=None
 drawBox=False
 pause=False
-histBar = np.zeros((5,256),np.uint8)
-histBar.fill(255)
 
 def mouseclick(event,x,y,flags,param):
     global xx,yy,ww,hh,drawBox
@@ -111,21 +115,46 @@ def keyboard(waitFor):
         print "HIST_SAMP_DILATION=", HIST_SAMP_DILATION
     return False
 
+displayIm = np.zeros((480,640+256,3), np.uint8)
+blackTopBar = np.zeros((295,256),np.uint8)
+blackBar = np.zeros((4,256),np.uint8)
+whiteBar = np.zeros((4,256),np.uint8)
+white1Bar = np.zeros((1,256),np.uint8)
+whiteBar.fill(255)
+white1Bar.fill(255)
 def display():
     global imArray,pause,xx,yy,ww,hh,src
     # Display the resulting frame
     imArray[1] = imArray[0].copy()
     cv2.rectangle(imArray[1],(xx,yy),(xx+ww,yy+hh),(0,255,0),2)
-    cv2.imshow('im',imArray[src])
+    if len(imArray[src].shape) > 2:
+        imArrayColor = imArray[src]
+    else:
+        imArrayColor = cv2.cvtColor(imArray[src], cv2.COLOR_GRAY2BGR)
+    displayIm[:,:640] = imArrayColor
+    #cv2.imshow('im',imArray[src])
     if trackingHist!=None: 
-#        print "shapes:",roiHist2.shape, histBar.shape, hist2.shape, trackingHist.shape
+#        print "shapes:",roiHist2.shape, whiteBar.shape, hist2.shape, trackingHist.shape
 #        sys.stdout.flush()
-        cv2.imshow('hist(roi,hist2,track)',np.vstack((roiHist2,histBar,hist2,histBar,trackingHist)))
+        # 480 = 5*2 + 4*2 + 462/6 | 77
+        histW = 27
+        sidebar = np.vstack((blackTopBar,whiteBar,
+            blackBar,roiHist2[:histW,:],white1Bar,roiHist2[-histW:,:],
+            whiteBar,hist2[:histW,:],white1Bar,hist2[-histW:,:],
+            whiteBar,trackingHist[:histW,:],white1Bar,trackingHist[-histW:,:],
+            blackBar
+        ))
+        sidebar[sidebar > 0] = 255
+        sidebar = cv2.cvtColor(sidebar, cv2.COLOR_GRAY2BGR)
+        #cv2.imshow('hist(roi,hist2,track)',sidebar)
+        displayIm[:,640:] = sidebar
+        #print sidebar.shape
+    cv2.imshow('im',displayIm)
 
 #----------------------------------------------------------------------
 
 cv2.namedWindow('im')
-cv2.namedWindow('hist(roi,hist2,track)')
+#cv2.namedWindow('hist(roi,hist2,track)')
 #cv2.setMouseCallback('im',mouseclick)
 
 trackingHist=np.zeros((180,256),np.uint8)
@@ -141,8 +170,9 @@ cv2.rectangle(trackingHist,(40,0),(250,92),255,-1)
 roiHist2= cv2.calcHist(np.zeros((480,640),np.uint8),[0,1], None, [180,256], [0,180,0,256])
 roiHist2[:,:] = 0
 trackingHist=roiHist2.copy()
-cv2.rectangle(trackingHist,(140,174),(250,180),255,-1)
-cv2.rectangle(trackingHist,(140,0),(250,3),255,-1)
+#CALIB
+cv2.rectangle(trackingHist,(80,170),(250,180),255,-1)
+cv2.rectangle(trackingHist,(80,0),(250,8),255,-1)
 
 #print "max",np.max(trackingHist),"shape",trackingHist.shape
 #cv2.imshow('trackhist',trackingHist)
@@ -154,6 +184,7 @@ while(True):
     if imArray[src]!=None: display()
     if pause: 
 #        keyboard(100)
+        _,_ = cap.read()
         continue
 
     # Grab RoI
@@ -223,6 +254,10 @@ while(True):
         imArray[2] = dst #grayscale distance
         ret,thresh = cv2.threshold(dst,threshVal,255,0)
         imArray[3] = thresh
+        val = hsvt[:,:,2]
+        val[val < HSV_V0] = 0
+        val[val > 0] = 255
+        thresh = cv2.bitwise_and(thresh, val)
         thresh3 = cv2.merge((thresh,thresh,thresh)) #threshold, 3-channel
         img4 = cv2.bitwise_and(im,thresh3) #combined image
         imArray[4] = img4
@@ -231,6 +266,7 @@ while(True):
         #test: blob tracking; redo the histogram
         # BLOB_TRACK #
         if BLOB_TRACK==False: continue
+        thresh = cv2.dilate(thresh, None)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(K1SIZE,K1SIZE))
         kernel2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(K2SIZE,K2SIZE))
         cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel,thresh)
@@ -310,7 +346,7 @@ while(True):
             #pixelpoints = np.transpose(np.nonzero(mask))
             #resample RoI
             hist2 = cv2.calcHist([hsv],[0,1], mask, [180,256], [0,180,0,256])
-            print "h2max",np.max(hist2),"h2shape",hist2.shape
+            #print "h2max",np.max(hist2),"h2shape",hist2.shape
             hist2[HSV_H0:HSV_H1,:] = 0
             hist2[:,HSV_S0:HSV_S1] = 0
             cv2.normalize(hist2,hist2,0,255,cv2.NORM_MINMAX)
