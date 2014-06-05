@@ -27,7 +27,7 @@ purge_pyc()
 from cvcommon import *
 purge_pyc()
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 print "Press 'q' to quit"
 
 FPS_PRINT=False
@@ -38,12 +38,12 @@ HIST_FRAC=0.5
 HIST_MIN_STRENGTH=5
 HIST_ROI_DILATION=0
 HIST_SAMP_DILATION=0
-HSV_H0=10
+HSV_H0=7
 HSV_H1=160
 HSV_S0=0
 HSV_S1=30
 HSV_S2=60
-HSV_V0=40
+HSV_V0=80
 K1SIZE=5
 K2SIZE=10
 TELEMETRY = {
@@ -149,13 +149,16 @@ def display():
         #cv2.imshow('hist(roi,hist2,track)',sidebar)
         displayIm[:,640:] = sidebar
         #print sidebar.shape
-    cv2.imshow('im',displayIm)
+    #cv2.imshow('im',displayIm)
+    cv2.imshow('PringleCV',displayIm)
 
 #----------------------------------------------------------------------
 
-cv2.namedWindow('im')
+cv2.namedWindow('PringleCV')
+#cv2.namedWindow('im')
 #cv2.namedWindow('hist(roi,hist2,track)')
 #cv2.setMouseCallback('im',mouseclick)
+cv2.setMouseCallback('PringleCV',mouseclick)
 
 trackingHist=np.zeros((180,256),np.uint8)
 hist=np.zeros((180,256),np.uint8)
@@ -214,6 +217,7 @@ while(True):
     # Capture frame-by-frame
     ret, im = cap.read()
     im = cv2.medianBlur(im, 5)
+    im = cv2.resize(im, (640,480))
     imArray=[im.copy() for i in xrange(len(imArray))]
 
     t.append(time())
