@@ -53,7 +53,10 @@ if not ret:
 print "Press 'h' for help"
 print "Press 'q' to quit"
 
-HELP_MODE=True
+ECONOMY_MODE=True
+HELP_MODE=False
+UDP_MESSAGE=""
+UDP_COUNTER=0
 UDP_SEND=False
 FPS_PRINT=False
 BLOB_TRACK=True
@@ -72,9 +75,9 @@ HSV_V0=40
 K1SIZE=5
 K2SIZE=10
 TELEMETRY = {
-    "x": None,
-    "y": None,
-    "w": None
+    "x": 640/2,
+    "y": 480/2,
+    "w": 100
 }
 SRC_NAMES = [
     "Calibration View",
@@ -87,6 +90,7 @@ SRC_NAMES = [
 threshVal=60
 
 t = [time()]
+w = [100]
 fps=0
 f=0
 #(xx,yy,ww,hh) = (640/2-60,480/2-80,120,160)
@@ -103,17 +107,28 @@ trackingHist=None
 drawBox=False
 pause=False
 
-def udp_send(msg):
-    global UDP_PORT, UDP_ADDR
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+try:
+    UDP_SOCK = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+except Exception as e:
+    print "Opening UDP socket failed: "+e.message
+    exit(1)
+def udp_send(msg=None):
+    global UDP_MESSAGE, UDP_COUNTER, UDP_SOCK
+
+    if msg is None:
+        msg = UDP_MESSAGE+'\r\n'
+
     try:
-        l = sock.sendto(msg, (UDP_ADDR, UDP_PORT))
+        l = UDP_SOCK.sendto(msg, (UDP_ADDR, UDP_PORT))
     except Exception as e:
         print "UDP send failed: "+e.message
         exit(1)
     finally:
         if l != len(msg):
             print "UDP send failed: send length (%d) != message length (%d)" % l, len(msg)
+            exit(1)
+        UDP_COUNTER += 1
+
 
 def mouseclick(event,x,y,flags,param):
     global xx,yy,ww,hh,drawBox,src
@@ -193,22 +208,23 @@ whiteBar = np.zeros((4,256),np.uint8)
 white1Bar = np.zeros((1,256),np.uint8)
 whiteBar.fill(255)
 white1Bar.fill(255)
+FONT = cv2.FONT_HERSHEY_SIMPLEX
 FONT_SIZE = 0.5
 
 def text_drawsize(s):
-    return cv2.getTextSize(s, cv2.FONT_HERSHEY_SIMPLEX, FONT_SIZE, 2)
+    return cv2.getTextSize(s, FONT, FONT_SIZE, 2)
 
-def drawtext_leftalign(im, msg, x, y, font_scaler = 1.0, rect=True):
+def drawtext_leftalign(im, msg, x, y, font_scaler=FONT_SIZE, rect=True, thickness=1):
     (tw,th), tbl = text_drawsize(msg)
     if rect:
-        cv2.rectangle(im, (x, y-th-tbl-2), (x+tw, y), cv2_black, -1)
-    cv2.putText(displayIm, msg, (x, y-tbl), cv2.FONT_HERSHEY_SIMPLEX, font_scaler*FONT_SIZE, (0,255,0))
+        cv2.rectangle(im, (x-2, y-th-tbl-2), (x+tw+2, y), cv2_black, -1)
+    cv2.putText(displayIm, msg, (x, y-tbl), FONT, font_scaler, (0,255,0), thickness)
 
-def drawtext_centered(im, msg, x, y, font_scaler = 1.0, rect=True):
+def drawtext_centered(im, msg, x, y, font_scaler = FONT_SIZE, rect=True, thickness=1):
     (tw,th), tbl = text_drawsize(msg)
     if rect:
-        cv2.rectangle(im, (x-tw/2, y-th-tbl-2), (x+tw/2, y), cv2_black, -1)
-    cv2.putText(displayIm, msg, (x-tw/2, y-tbl), cv2.FONT_HERSHEY_SIMPLEX, font_scaler*FONT_SIZE, (0,255,0))
+        cv2.rectangle(im, (x-tw/2-2, y-th-tbl-2), (x+tw/2+2, y), cv2_black, -1)
+    cv2.putText(displayIm, msg, (x-tw/2, y-tbl), FONT, font_scaler, (0,255,0), thickness)
 
 def display():
     global imArray,pause,xx,yy,ww,hh,src,HELP_MODE,pause,FONT_SIZE
@@ -230,7 +246,7 @@ def display():
 #        sys.stdout.flush()
         # 480 = 5*2 + 4*2 + 462/6 | 77
         histW = 27
-        sidebar = np.vstack((blackTopBar,whiteBar,
+        sidebar = np.vstack((blackTopBar,blackBar,
             blackBar,roiHist2[-histW:,:], white1Bar, roiHist2[:histW,:],
             hist2[-histW:,:], white1Bar, hist2[:histW,:],
             trackingHist[-histW:,:], white1Bar, trackingHist[:histW,:],
@@ -271,11 +287,39 @@ def display():
                 drawtext_leftalign(displayIm, msg, 0, 60+22*i)
 
     #draw active screen
+    drawtext_leftalign(displayIm, "%.2ffps @ 640 x 480" % fps, 0, 20)
     activeText = " ".join(['['*(src_i == src)+str(i+1)+']'*(src_i == src) for i,src_i in enumerate([1,2,4,6])])
-    activeText += "    " + SRC_NAMES[src-1]
-    drawtext_centered(displayIm, activeText, 320, 20)
+    drawtext_leftalign(displayIm, activeText, 300, 20)
+    drawtext_leftalign(displayIm, SRC_NAMES[src-1], 400, 20)
     #print activeText
     #draw sidebar (it's about 300px high)
+    # 20 + 88; 134
+    msgSet = ["Welcome to PringleCV",
+              "Computer vision software for CSSE3010",
+              "Tracking: Move a red object into view",
+              "",
+              "        "+"TRACK:  "+"Tracking"*(BLOB_TRACK)+"Off"*(not BLOB_TRACK),
+              "        "+UDP_MESSAGE,
+              "",
+              "        "+"UDP:    "+"Broadcasting"*(UDP_SEND)+"Off"*(not UDP_SEND),
+              "        "+"%s : %s #%d" % (str(UDP_ADDR), str(UDP_PORT), UDP_COUNTER),
+    ]
+    for i, msg in enumerate(msgSet):
+        if msg != "":
+            if i == 0: #or i == len(msgSet)-1:
+                fscaler = 0.5
+            else:
+                fscaler = 0.4
+            drawtext_leftalign(displayIm, msg, 640+1, 20+22*i, font_scaler=fscaler, rect=False)
+    if BLOB_TRACK:
+        cv2.circle(displayIm, (640+30, 20 + 88 - 10), 7, cv2_green, -1)
+    else:
+        cv2.circle(displayIm, (640+30, 20 + 88 - 10), 7, cv2_red, -1)
+    if UDP_SEND:
+        cv2.circle(displayIm, (640+30, 20 + 154 - 10), 7, cv2_green, -1)
+    else:
+        cv2.circle(displayIm, (640+30, 20 + 154 - 10), 7, cv2_red, -1)
+    cv2.line(displayIm, (640+1, 275), (640+256, 275), cv2_green, 1)
     drawtext_leftalign(displayIm, "Histograms:", 640+4, 300, rect=False)
     drawtext_leftalign(displayIm, "Calibrated", 640+4, 340, rect=False)
     drawtext_leftalign(displayIm, "Sampling", 640+4, 394, rect=False)
@@ -319,7 +363,7 @@ while(True):
     if imArray[src]!=None: display()
     if pause: 
 #        keyboard(100)
-        sleep(0.02)
+        if ECONOMY_MODE: sleep(0.02)
         ret, _ = cap.read()
         if not ret:
             print "Failed to start: Could not get frame from Webcam %d" % CV_WEBCAM
@@ -357,11 +401,12 @@ while(True):
             src=2
             print "Calibration: took sample from (%d,%d) to (%d,%d)" % (xx,yy,xx+ww,yy+hh)
         else:
-            print "Calibration: aborted, selection box too small"
+            grab = False
+            #print "Calibration: aborted, selection box too small"
         
 
     # Capture frame-by-frame
-    sleep(0.02)
+    if ECONOMY_MODE: sleep(0.02)
     ret, im = cap.read()
     if not ret:
         print "Webcam %d disconnected - exiting..." % CV_WEBCAM
@@ -562,6 +607,13 @@ while(True):
 #TODO mandatory match - certain band of red
             cv2.rectangle(trackingHist,(140,175),(250,180),255,-1)
             cv2.rectangle(trackingHist,(140,0),(250,2),255,-1)
+
+            TELEMETRY["x"] = cx
+            TELEMETRY["y"] = cy
+            TELEMETRY["w"] = canw
+            UDP_MESSAGE = "x:%4d y:%4d w:%4d" % (TELEMETRY["x"], TELEMETRY["y"], TELEMETRY["w"])
+            if UDP_SEND:
+                udp_send()
 
 
 #----------------------------------------------------------------------
