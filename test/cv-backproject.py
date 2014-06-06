@@ -90,7 +90,7 @@ SRC_NAMES = [
 threshVal=60
 
 t = [time()]
-w = [100]
+warr = [100]
 fps=0
 f=0
 #(xx,yy,ww,hh) = (640/2-60,480/2-80,120,160)
@@ -608,9 +608,14 @@ while(True):
             cv2.rectangle(trackingHist,(140,175),(250,180),255,-1)
             cv2.rectangle(trackingHist,(140,0),(250,2),255,-1)
 
+            # telemetry
+            warr.append(canw)
+            if len(warr) > max(3, int((fps + 1)/2)):
+                warr.pop(0)
+                TELEMETRY["w"] = sum(warr)/len(warr)
             TELEMETRY["x"] = cx
             TELEMETRY["y"] = cy
-            TELEMETRY["w"] = canw
+            #TELEMETRY["w"] = canw
             UDP_MESSAGE = "x:%4d y:%4d w:%4d" % (TELEMETRY["x"], TELEMETRY["y"], TELEMETRY["w"])
             if UDP_SEND:
                 udp_send()
