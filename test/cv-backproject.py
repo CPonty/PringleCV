@@ -116,7 +116,9 @@ def udp_send(msg):
             print "UDP send failed: send length (%d) != message length (%d)" % l, len(msg)
 
 def mouseclick(event,x,y,flags,param):
-    global xx,yy,ww,hh,drawBox
+    global xx,yy,ww,hh,drawBox,src
+    if src != 1:
+        return
     if event == cv2.EVENT_LBUTTONDOWN:
         xx,yy = x,y
         drawBox=True
@@ -152,6 +154,7 @@ def keyboard(waitFor):
     elif k == ord(' ') or k == ord('p'):
         pause = not(pause)
     elif k == ord('c'):
+        HELP_MODE = False
         if src == 1:
             grab = True
         else:
@@ -195,15 +198,17 @@ FONT_SIZE = 0.5
 def text_drawsize(s):
     return cv2.getTextSize(s, cv2.FONT_HERSHEY_SIMPLEX, FONT_SIZE, 2)
 
-def drawtext_leftalign(im,msg,x,y):
+def drawtext_leftalign(im, msg, x, y, font_scaler = 1.0, rect=True):
     (tw,th), tbl = text_drawsize(msg)
-    cv2.rectangle(im, (x, y-th-tbl-2), (x+tw, y), cv2_black, -1)
-    cv2.putText(displayIm, msg, (x, y-tbl), cv2.FONT_HERSHEY_SIMPLEX, FONT_SIZE, (0,255,0))
+    if rect:
+        cv2.rectangle(im, (x, y-th-tbl-2), (x+tw, y), cv2_black, -1)
+    cv2.putText(displayIm, msg, (x, y-tbl), cv2.FONT_HERSHEY_SIMPLEX, font_scaler*FONT_SIZE, (0,255,0))
 
-def drawtext_centered(im,msg,x,y):
+def drawtext_centered(im, msg, x, y, font_scaler = 1.0, rect=True):
     (tw,th), tbl = text_drawsize(msg)
-    cv2.rectangle(im, (x-tw/2, y-th-tbl-2), (x+tw/2, y), cv2_black, -1)
-    cv2.putText(displayIm, msg, (x-tw/2, y-tbl), cv2.FONT_HERSHEY_SIMPLEX, FONT_SIZE, (0,255,0))
+    if rect:
+        cv2.rectangle(im, (x-tw/2, y-th-tbl-2), (x+tw/2, y), cv2_black, -1)
+    cv2.putText(displayIm, msg, (x-tw/2, y-tbl), cv2.FONT_HERSHEY_SIMPLEX, font_scaler*FONT_SIZE, (0,255,0))
 
 def display():
     global imArray,pause,xx,yy,ww,hh,src,HELP_MODE,pause,FONT_SIZE
@@ -237,6 +242,9 @@ def display():
         displayIm[:,640:] = sidebar
         #print sidebar.shape
     #cv2.imshow('im',displayIm)
+    if src == 1:
+        msg = "Calibration: draw a box around the can and press 'C'"
+        drawtext_centered(displayIm, msg, 320, 480)
     if pause:
         msg = "PAUSED"
         drawtext_centered(displayIm, msg, 320, 480-25)
@@ -244,7 +252,7 @@ def display():
         #cv2.rectangle(displayIm, (320-tw/2, 480-th-tbl-2), (320+tw/2, 480), cv2_black, -1)
         #cv2.putText(displayIm, msg, (320-tw/2, 480-tbl), cv2.FONT_HERSHEY_SIMPLEX, FONT_SIZE, (0,255,0))
     if HELP_MODE:
-        msgSet = ["CONTROLS:",
+        msgSet = ["HELP",
             "",
             "  1..4      Select View",
             "  T         Tracking On/Off",
@@ -262,11 +270,17 @@ def display():
             if msg != "":
                 drawtext_leftalign(displayIm, msg, 0, 60+22*i)
 
-    #TODO draw active screen
+    #draw active screen
     activeText = " ".join(['['*(src_i == src)+str(i+1)+']'*(src_i == src) for i,src_i in enumerate([1,2,4,6])])
     activeText += "    " + SRC_NAMES[src-1]
     drawtext_centered(displayIm, activeText, 320, 20)
     #print activeText
+    #draw sidebar (it's about 300px high)
+    drawtext_leftalign(displayIm, "Histograms:", 640+4, 300, rect=False)
+    drawtext_leftalign(displayIm, "Calibrated", 640+4, 340, rect=False)
+    drawtext_leftalign(displayIm, "Sampling", 640+4, 394, rect=False)
+    drawtext_leftalign(displayIm, "Tracking", 640+4, 449, rect=False)
+    #final divider line
     displayIm[:,640,:] = 255
     cv2.imshow('PringleCV',displayIm)
 
@@ -305,6 +319,7 @@ while(True):
     if imArray[src]!=None: display()
     if pause: 
 #        keyboard(100)
+        sleep(0.02)
         ret, _ = cap.read()
         if not ret:
             print "Failed to start: Could not get frame from Webcam %d" % CV_WEBCAM
@@ -313,7 +328,13 @@ while(True):
 
     # Grab RoI
     if grab==True and imArray[0]!=None:
-        if ww>2 and hh>2:
+        if abs(ww)>2 and abs(hh)>2:
+            if ww<0:
+                xx += ww
+                ww = -ww
+            if hh<0:
+                yy += hh
+                hh = -hh
             roi = im[yy:yy+hh, xx:xx+ww]
             hsv = cv2.cvtColor(roi,cv2.COLOR_BGR2HSV)
             roiHist= cv2.calcHist([hsv],[0,1], None, [180,256], [0,180,0,256])
@@ -340,6 +361,7 @@ while(True):
         
 
     # Capture frame-by-frame
+    sleep(0.02)
     ret, im = cap.read()
     if not ret:
         print "Webcam %d disconnected - exiting..." % CV_WEBCAM
